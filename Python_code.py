@@ -8,7 +8,7 @@ import sqlite3
 import json
 from datetime import datetime
 
-# --- FastAPI ---
+#FastAPI
 app = FastAPI()
 
 app.add_middleware(
@@ -16,19 +16,18 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-    ],  # your Vite dev server
+    ],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-GEMINI_API_KEY = "AIzaSyDorP500biRue4449fZieUkOVPNi32ax08"
+GEMINI_API_KEY = "API-KEY"
 
-# --- SQLite ---
+#SQLite
 conn = sqlite3.connect("chat.db", check_same_thread=False)
 cursor = conn.cursor()
 
-# --- Luodaan JSON-taulu, jos sitä ei ole ---
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS chat_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,7 +58,6 @@ def get_previous_logs():
     cursor.execute("SELECT log_json FROM chat_log ORDER BY id ASC")
     rows = cursor.fetchall()
     history = [json.loads(row[0]) for row in rows]
-    # Muodostetaan promptiin merkkijonot muodossa "User: ... Response: ... Mood: ..."
     return "\n".join([f"User: {entry['input']} Response: {entry['response']} Mood: {entry['mood']}" for entry in history])
 
 client = genai.Client(api_key=GEMINI_API_KEY)
@@ -73,11 +71,9 @@ async def vastaanota_viesti(request: Request):
     body = await request.json()
     user_input = body.get("input", "")
 
-    # --- Poistetaan yli 15 minuuttia vanhat logit automaattisesti ---
     cursor.execute("DELETE FROM chat_log WHERE timestamp <= datetime('now', '-15 minutes')")
     conn.commit()
 
-    # Hae jäljellä olevat logit promptiin
     previous_history = get_previous_logs()
     if previous_history:
         previous_history = "Previous conversation:\n" + previous_history + "\n"
@@ -127,6 +123,5 @@ def cleanup_old_logs():
     conn.commit()
     return {"message": "Logs older than 15 minutes have been deleted."}
 
-# --- Käynnistys ---
 if __name__ == "__main__":
     uvicorn.run("Python_code:app", host="127.0.0.1", port=8000, reload=True)
